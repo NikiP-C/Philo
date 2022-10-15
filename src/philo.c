@@ -6,7 +6,7 @@
 /*   By: nphilipp <nphilipp@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2022/09/07 17:03:02 by nphilipp      #+#    #+#                 */
-/*   Updated: 2022/10/12 19:41:55 by nphilipp      ########   odam.nl         */
+/*   Updated: 2022/10/15 16:33:49 by nphilipp      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -75,18 +75,16 @@ pthread_mutex_t	**setup_forks(t_info info)
 	return (forks);
 }
 
-void	thread_set_up(t_info info)
+void	thread_set_up(t_info info, t_philo **philos)
 {
 	pthread_t		*threads;
-	t_philo			**philos;
 	pthread_mutex_t	**forks;
 	pthread_t		alive;
 	int				i;
 
 	threads = malloc(sizeof(pthread_t *) * (info.number_philo + 1));
-	philos = malloc(sizeof(t_philo *) * info.number_philo);
 	forks = setup_forks(info);
-	if (threads == NULL || philos == NULL || forks == NULL)
+	if (threads == NULL || forks == NULL)
 		return ; //add error
 	i = 0;
 	while (i < info.number_philo)
@@ -102,13 +100,24 @@ void	thread_set_up(t_info info)
 		pthread_join(threads[i], NULL);
 		i++;
 	}
+	i = 0;
+	while (i < info.number_philo)
+	{
+		pthread_mutex_destroy(&philos[i]->protect_eat);
+		pthread_mutex_destroy(forks[i]);
+		free(forks[i]);
+		i++;
+	}
+	free(threads);
+	free(forks);
 }
 
 int	main(int ac, char **av)
 {
-	t_info	info;
-
-	if (ac < 5)
+	t_info		info;
+	t_philo	**philos;
+	
+	if (ac != 5 && ac != 6)
 		return (0); //error not enough variables
 	if (check_variables(ac, av))
 		return (0); //error none numiric variables
@@ -116,17 +125,19 @@ int	main(int ac, char **av)
 	info.time_to_die = simp_atoi(av[2]);
 	info.time_to_eat = simp_atoi(av[3]);
 	info.time_to_sleep = simp_atoi(av[4]);
+	
 	if (ac >= 5)
 		info.often_to_eat = simp_atoi(av[5]);
 	else
 		info.often_to_eat = -1;
 	info.print = malloc(sizeof(pthread_mutex_t));
 	info.alive = malloc(sizeof(int));
-	if (info.print == NULL || info.alive == NULL)
+	philos = malloc(sizeof(t_philo *) * info.number_philo);
+	if (info.print == NULL || info.alive == NULL || philos == NULL)
 		return (0);
 	*info.alive = 1;
 	pthread_mutex_init(info.print, NULL);
 	gettimeofday(&info.start_time, NULL);
-	thread_set_up(info);
+	thread_set_up(info, philos);
 	return (0);
 }
